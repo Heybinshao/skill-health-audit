@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
 description: "【Skill 结构体检】开源/发布前验收你的 skill 或开发方案：孤儿 references、断裂引用三分类定性、同名副本遮蔽检测、错位文件、残留章节、未闭合代码块、权威声称核实、兜底前向引用、死 triggers 字段、触发词覆盖、旧口径对账——十一步清单 + 自动化脚本，126 个 skill 全量验收实战验证。"
-version: 1.1.0
+version: 1.1.3
 author: Hermes Agent
 platforms: [linux, macos, windows]
 metadata:
