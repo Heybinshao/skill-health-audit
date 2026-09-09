@@ -2,7 +2,7 @@
 name: skill-health-audit
 description: "【Skill 结构体检】开源/发布前验收你的 skill 或开发方案：孤儿 references、断裂引用三分类定性、同名副本遮蔽检测、错位文件、残留章节、未闭合代码块、权威声称核实、兜底前向引用、死 triggers 字段、触发词覆盖、旧口径对账——十一步清单 + 自动化脚本，126 个 skill 全量验收实战验证。"
 version: 1.1.0
-author: 彬少
+author: Hermes Agent
 platforms: [linux, macos, windows]
 metadata:
   hermes:
@@ -195,6 +195,7 @@ grep -nE "旧模式名|旧关键词" <skill_dir>/SKILL.md <skill_dir>/references
 | 指向行声称「见 X 文件的 Y 条目」但 X 里没有 Y | 外迁/重组时指向行凭记忆写，目标文件实际条目名对不上（2026-08-28 实测：④写「日期过时→date」，pitfalls.md 无此条，真身在 common-pitfalls.md） | 写指向行前先 grep 目标文件确认条目存在；跨文件指向优先指向条目真身而非就近文件 |
 | 同名 skill 两份，删文件后总再回来 | hub 管理的 skill 按 lock.json 登记路径复种；删副本前先 grep `~/.hermes/skills/.hub/lock.json` | lock.json 登记的走 `hermes skills uninstall`，未登记的直接删文件 |
 | 把仓库体量或 star 当 skill 复杂度 | 分发适配器会让仓库看起来很重，canonical 文件可能只有一百行 | 体检只打 canonical SKILL.md（见 8f）；star 是分发信号，不是结构分数 |
+| 散文落点路径核不到（8d 同族） | 正文句子里的「产物存到 `<某路径>`」「归档到 X 目录」不是引用语法，第 2 步的孤儿/断链检测天然扫不到 | 把路径拿到真实磁盘 `ls` 核对存在性；同动作在姊妹 skill 有另一种写法时先对比口径，两边矛盾必有一假（2026-09 本地版实测沉淀） |
 | 引用检查把跨 skill 指向报成断裂 | 正文提及别家 skill 的 references 路径会被本目录引用检查误判为断裂 | 先读命中句语义再定性；跨 skill 指向措辞写明「跨 skill 文件不属本目录」消歧，或避免裸路径写法 |
 
 ## 体检后：要不要跑路径模拟？（2026-08-08 定稿）
