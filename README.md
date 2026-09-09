@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.1.0-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.1.3-blue)
 
 > 把你的 AI skill 丢给这套十步清单，查出「读不到、翻不到、走不通」的结构病。
 
