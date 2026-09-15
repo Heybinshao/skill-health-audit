@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.1.3-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.1.4-blue)
 
 > 把你的 AI skill 丢给这套十步清单，查出「读不到、翻不到、走不通」的结构病。
 
@@ -51,7 +51,7 @@ python3 scripts/audit_skill_health.py <skill目录>
 ## 适合 / 不适合
 
 **适合**：
-- ✅ 开源/发布 skill 前的验收（结构不健康谈开源是空中楼阁）
+- ✅ 开源/发布 skill 前的结构体检（结构不健康谈开源是空中楼阁）
 - ✅ 多轮迭代后的 skill（每轮迭代都可能产生孤儿/残留/漂移）
 - ✅ 架构改造后（双模式改造、改名、换方法论——旧口径必然残留）
 - ✅ 带 scripts/ 的 skill（文档与脚本割裂是体检清单上最容易漏的一项）
