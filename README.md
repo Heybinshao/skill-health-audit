@@ -1,6 +1,6 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.1.4-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.3.0-blue)
 
-> 把你的 AI skill 丢给这套十步清单，查出「读不到、翻不到、走不通」的结构病。
+> 把你的 AI skill 丢给这套分步体检清单，查出「读不到、翻不到、走不通」的结构病。
 
 ---
 
@@ -16,12 +16,13 @@
 
 这些病，静态检查（看结构、查格式）全部查不出来——只有**按清单一步步体检**才能暴露。
 
-## 十步体检清单
+## 体检清单（16 个子项，按序执行）
 
 | # | 检查项 | 查什么 |
 |---|--------|--------|
-| 1 | 通读 SKILL.md + 全部 references | 中文 UTF-8 文件被误判 Binary 的坑（用 python 读） |
+| 1 | 通读 SKILL.md + 全部 references + scripts | 中文 UTF-8 文件被误判 Binary 的坑（用 python 读）；体检/验收结论必须全目录通读后落笔 |
 | 2 | 引用完整性交叉检查 ⭐ | 孤儿 references（有文件没链接）/ 断裂引用（有链接没文件） |
+| 2b | 同名副本遮蔽检测 | 同 `name` 两份 skill，被加载器去重后其中一份永不生效 |
 | 3 | 错位文件检测 | 内容属于别的 skill 的错位文件 |
 | 4 | 重复/残留章节 | 迭代中粘贴残留：完整版 + 半成品并存 |
 | 5 | 代码块配对 | 未闭合 ` ``` ` 会把后续整节渲染成代码 |
@@ -30,7 +31,11 @@
 | 8 | 兜底前向引用 | 异常解法写在尾部，触发点在入口——读者不知道有兜底 |
 | 8b | 文档/脚本一致性 | 文档说 JSON 工作流、脚本只吃 HTML |
 | 8c | 触发词一致性 | frontmatter triggers vs 正文触发词漂移 |
-| 8d | 架构改造后旧口径对账 | 改造后旧表述残留在漏改位置 |
+| 8d | 架构改造后旧口径对账 | 改造后旧表述残留在漏改位置（grep 本轮变更关键词） |
+| 8e | 体量分层 | 主文件超 ~15KB 且结构健康 → 附则外迁 references |
+| 8f | 第三方仓库对象判定 | 体检对象是 canonical SKILL.md，分发适配器不算膨胀 |
+| 8g | 全量判据对账 ⭐ | 跨文件重复出现的可执行判据（命令/数值/范围声明）逐对双向核方向——不依赖本轮变更关键词，专抓历史轮次残留的「A 文件禁 X、B 文件教 X」语义打架 |
+| 9 | 修复后验证 | 重 grep/重读/frontmatter 核验，不验证不汇报 |
 
 ⭐ = 实战中抓出过真 bug、且通用工具查不出的高价值项。
 
@@ -46,7 +51,7 @@
 python3 scripts/audit_skill_health.py <skill目录>
 ```
 
-退出码 0 = 健康，1 = 有问题（输出具体问题清单）。第 7/8/8b/8c/8d 步需人工判断，脚本不覆盖。
+退出码 0 = 健康，1 = 有问题（输出具体问题清单）。另含 frontmatter 完整性检测。第 7/8/8b/8c/8d/8e/8f/8g 步需人工判断，脚本不覆盖。
 
 ## 适合 / 不适合
 
@@ -65,11 +70,11 @@ python3 scripts/audit_skill_health.py <skill目录>
 
 ```
 skill-health-audit/
-├── SKILL.md                                # 十步体检清单（主流程）
+├── SKILL.md                                # 分步体检清单（主流程）
 ├── references/
-│   └── doc-script-split-pitfalls.md        # 8b 延伸坑（脚本相对路径/config 死配置）
+│   └── doc-script-split-pitfalls.md        # 8b/8d 延伸坑（脚本相对路径/config 死配置/plan 类声称检查手法）
 └── scripts/
-    └── audit_skill_health.py               # 自动化体检（第 2/4/5 步）
+    └── audit_skill_health.py               # 自动化体检（第 2/4/5 步 + frontmatter）
 ```
 
 ## 背景
