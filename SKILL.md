@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
 description: "【Skill 结构体检】开源/发布前给 skill 或开发方案做结构体检：孤儿 references、断裂引用三分类定性、同名副本遮蔽检测、错位文件、残留章节、未闭合代码块、权威声称核实、兜底前向引用、死 triggers 字段、触发词覆盖、旧口径对账、全量判据对账——分步清单 + 自动化脚本，126 个 skill 全量体检实战验证。触发场景：检查一下skill、体检skill、有没有开源必要、skill好不好用、整理skill、我的XX skill怎么样。只管单 skill 内部结构；整体验收（结构+场景+路径模拟出统一报告）走 skill-acceptance。"
-version: 1.4.1
+version: 1.4.2
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -182,7 +182,7 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 
 **方法（半机械：脚本出候选，人做定性）：**
 
-先跑 `python3 <本skill目录>/scripts/criteria_overlap.py <skill_dir>`——自动提取**跨文件重复 token**（行内代码 token、数值阈值、计数点名、步骤/闸门号引用四类）并列出出现在 2+ 文件的候选对；脚本只出线索，误报率不低（示例词、泛用词），定性永远是人。无脚本环境（第三方安装缺 scripts/）按下列六形态手工枚举——**六形态各来自 2026-09-16 四轮验收实战，每形态至少抓到一处真打架**：
+先跑 `python3 <本skill目录>/scripts/criteria_overlap.py <skill_dir>`——自动提取**跨文件重复 token**（行内代码 token、数值阈值、计数点名、步骤/闸门号引用四类）并列出出现在 2+ 文件的候选对；脚本只出线索，误报率不低（示例词、泛用词），定性永远是人。对照实测（2026-09-16）：对人工判定无打架的 path-simulation 出 6 候选全假阳性（`NUM:3条`、`REF:步骤` 类同源泛词），对 mfm 出 41 候选含真打架线索——**候选信噪比低是设计内**：FP 是看一眼即判一致的无害候选，本步真正要防的是漏报，勿因 FP 弃用或收紧规则。无脚本环境（第三方安装缺 scripts/）按下列六形态手工枚举——**六形态各来自 2026-09-16 四轮验收实战，每形态至少抓到一处真打架**：
 
 1. **命令/CLI 参数与字段名**（如 `file_size`、`wc -c`、`--write-baseline`）——A 文件禁用、B 文件教学
 2. **数值与阈值**（容量线、百分比、字符上限、超时数）——两处数值不等或口径（字节/字符）不同
