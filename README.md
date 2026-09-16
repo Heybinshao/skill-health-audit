@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.3.0-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.4.0-blue)
 
 > 把你的 AI skill 丢给这套分步体检清单，查出「读不到、翻不到、走不通」的结构病。
 
@@ -51,7 +51,7 @@
 python3 scripts/audit_skill_health.py <skill目录>
 ```
 
-退出码 0 = 健康，1 = 有问题（输出具体问题清单）。另含 frontmatter 完整性检测。第 7/8/8b/8c/8d/8e/8f/8g 步需人工判断，脚本不覆盖。
+退出码 0 = 健康，1 = 有问题（输出具体问题清单）。另含 frontmatter 完整性检测。第 7/8/8b/8c/8d/8e/8f 步需人工判断；8g 有候选提取器 `scripts/criteria_overlap.py`（提取行内代码 token/数值阈值/计数点名/步骤引用四类，输出出现在 2+ 文件的候选对，★标主文↔ref 优先）——**只出线索不定性，误报正常，逐对结论仍由人给**。
 
 ## 适合 / 不适合
 
@@ -74,7 +74,8 @@ skill-health-audit/
 ├── references/
 │   └── doc-script-split-pitfalls.md        # 8b/8d 延伸坑（脚本相对路径/config 死配置/plan 类声称检查手法）
 └── scripts/
-    └── audit_skill_health.py               # 自动化体检（第 2/4/5 步 + frontmatter）
+    ├── audit_skill_health.py               # 自动化体检（第 2/4/5 步 + frontmatter）
+    └── criteria_overlap.py                 # 8g 判据对账候选提取器（四类 token 跨文件配对）
 ```
 
 ## 背景
