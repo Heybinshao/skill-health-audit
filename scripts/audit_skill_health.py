@@ -6,7 +6,7 @@
 
 检查项:
     1. 孤儿 references: references/ 里有文件但 SKILL.md 正文没引用
-    2. 断裂引用: SKILL.md 引了 references/xxx.md 但文件不存在
+    2. 断裂引用: SKILL.md 引了 references/<文件名>.md 但文件不存在（占位符用尖括号写法，免被本正则自命中）
     3. 重复二级标题
     4. 代码块配对 (``` 应为偶数)
     5. frontmatter 存在性（仅查是否以 --- 开头；字段齐全性不查，人工核）
