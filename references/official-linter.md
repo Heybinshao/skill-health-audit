@@ -1,7 +1,7 @@
 # 官方 linter 用法与假阳性边界（Hermes 自带 tools/skill_linter.py）
 > 2026-09-20 外迁自 SKILL.md v1.4.2（原文逐字保留，未改写）。
 
-**官方 linter（Hermes 自带，补 frontmatter 与工具名口径）**：`~/.hermes/hermes-agent/tools/skill_linter.py` 的 `lint_skill()`，覆盖本 skill 清单之外的四类——description 长度(>60)/营销词、name 格式与目录名一致、version/author/license 存在性、platforms 取值、正文误提 shell 工具名。**它收的是 SKILL.md 文件路径，不是目录**（传目录静默不出结果）：
+**官方 linter（Hermes 自带，补 frontmatter 与工具名口径）**：`~/.hermes/hermes-agent/tools/skill_linter.py` 的 `lint_skill()`，覆盖本 skill 清单之外的四类——description 长度(>60)/营销词、name 格式与目录名一致、version/author/license 存在性、platforms 取值、正文误提 shell 工具名。**它收的是 SKILL.md 文件路径，不是目录**（传目录直接抛 `IsADirectoryError`——2026-09-22 venv 实测纠偏，旧表述「静默不出结果」不实）：
 
 ```python
 import sys, os; sys.path.insert(0, os.path.expanduser("~/.hermes/hermes-agent"))

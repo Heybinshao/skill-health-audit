@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
-description: "【Skill 结构体检】体检skill、检查一下skill。孤儿/断链/开源前"
-version: 1.5.3
+description: "【Skill 结构体检】体检skill、检查一下skill、会不会好用。只管单skill结构；验收走验收skill"
+version: 1.6.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -35,13 +35,13 @@ metadata:
 
 ```bash
 cd <skill_dir>
-grep -oE "references/[a-z0-9_-]+\.md" SKILL.md | sort -u   # 正文实际引用了哪些（含下划线命名，与 audit 脚本口径一致）
+grep -oiE "references/[a-z0-9_-]+\.md" SKILL.md | sort -u   # 正文实际引用了哪些（含下划线/大写命名，与 audit 脚本口径一致）
 ls references/                                             # 目录下实际有哪些
 ```
 
 - **目录有、正文没引 → 孤儿**：内容写了但读者永远翻不到（skill_view 的 linked_files 是自动列目录，不代表正文引用）。处理：正文补链接，或删除，二选一，不留半吊子。
 - **skill_view 的 linked_files 不算正文引用**——它是目录自动列举，只证明文件在，不证明正文挂了链接。孤儿判定以「grep SKILL.md 正文是否引用」为准（2026-09-12 实测：瘦身重排后 skill_view 显示 9 个 linked_files，脚本仍报 3 孤儿——文件都在，是重排丢了正文链接句）。
-- **脚本的「N 个引用」≠附属文件总数，引用扫描口径仅覆盖 markdown 链接语法**：正文行内反引号式引用（`scripts/batch_vision.py` 这类）不计入，会同时少报引用数、漏检 scripts/ 目录孤儿。核对法：`find <skill_dir> -type f` 列全部附属文件，逐个 grep 正文提及次数，0 次才是真孤儿——引用数与文件数的差额本身就是待人工定性清单。
+- **脚本的「N 个引用」≠附属文件总数；扫描口径 = 正文出现 `references/<文件名>.md` 字面即计入（链接语法/行内反引号/裸文本均命中——2026-09-22 负例实测，旧表述「仅覆盖 markdown 链接语法」不实已纠偏），但 scripts/ 目录与不带 references/ 前缀的提及不扫**，会漏检 scripts/ 孤儿。核对法：`find <skill_dir> -type f` 列全部附属文件，逐个 grep 正文提及次数，0 次才是真孤儿——引用数与文件数的差额本身就是待人工定性清单。
 - **正文引了、目录没有 → 断裂引用**：补文件或删引用。
 - **断裂报告先三分类定性再动手**（2026-09-06 全量验收 19 处断链实测：真断裂仅 3）：①示例代码块里的路径（教格式的举例）→ 不修；②举例性提及（教学句里写「坑表可写成独立 common-pitfalls.md 文件」这类，不带路径前缀也不算引用）→ 不修；③跨 skill 文件引用（正主在别的 skill 里且文件存在）→ 改为带「跨 skill 文件不属本目录」措辞消歧。只有「指向本目录 references/ 但文件不存在」才是真断裂。脚本正则无法区分，人工复核必做。
 - **核对口径补充**（原 skill-library-audit「单 Skill 内部健康审计」第 7 步，2026-09-20 归位）：②类跨 skill 引用要**去归属 skill 的 `references/` 核对**——按本目录报断链是**扫描器口径错误**；③类（教学/历史语境、示例占位名）不核对，非活指针。
@@ -55,8 +55,8 @@ ls references/                                             # 目录下实际有�
 
 ```bash
 # name 重复 = 有遮蔽（⚠️ 用 --include 递归：三层深的 binshao/agent/<主题>/<skill>/ 会被两层 glob 漏报）
-# ⚠️ 会带进两类噪音：SKILL.md.bak-* 备份文件（glob 前缀匹配）、正文里 name: 开头的示例行（design-md 等有）——
-#    命中后先人工核对是否真为两份同 name 的 skill 目录再定性，勿拿计数直接当结论
+# ⚠️ 噪音源：正文里 name: 开头的示例行（design-md 等有）——（--include=SKILL.md 精确匹配文件名，
+#    .bak 不会混入，2026-09-22 对照实测纠偏）命中后先人工核对是否真为两份同 name 的 skill 目录再定性，勿拿计数直接当结论
 grep -rh "^name:" ~/.hermes/skills --include=SKILL.md 2>/dev/null | sort | uniq -d
 ```
 
@@ -210,7 +210,7 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 
 **方法（半机械：脚本出候选，人做定性）：**
 
-先跑 `python3 <本skill目录>/scripts/criteria_overlap.py <skill_dir>`——自动提取**跨文件重复 token**（行内代码 token、数值阈值、计数点名、步骤/闸门号引用四类）并列出出现在 2+ 文件的候选对；脚本只出线索，误报率不低（示例词、泛用词），定性永远是人。对照实测（2026-09-16）：对人工判定无打架的 path-simulation 出 6 候选全假阳性（`NUM:3条`、`REF:步骤` 类同源泛词），对 mfm 出 41 候选含真打架线索——**候选信噪比低是设计内**：FP 是看一眼即判一致的无害候选，本步真正要防的是漏报，勿因 FP 弃用或收紧规则。无脚本环境（第三方安装缺 scripts/）按下列六形态手工枚举——**六形态各来自 2026-09-16 四轮验收实战，每形态至少抓到一处真打架**：
+先跑 `python3 <本skill目录>/scripts/criteria_overlap.py <skill_dir>`——自动提取**跨文件重复 token**（行内代码 token、数值阈值、计数点名、步骤/闸门号引用四类）并列出出现在 2+ 文件的候选对；脚本只出线索，误报率不低（示例词、泛用词），定性永远是人。对照实测（2026-09-16）：对人工判定无打架的 path-simulation 出 6 候选全假阳性（`NUM:3条`、`REF:步骤` 类同源泛词），对 mfm 出 41 候选含真打架线索——**候选信噪比低是设计内**：FP 是看一眼即判一致的无害候选，本步真正要防的是漏报，勿因 FP 弃用或收紧规则。无脚本环境（第三方安装缺 scripts/）按下列七形态手工枚举——**前六形态各来自 2026-09-16 四轮验收实战，每形态至少抓到一处真打架；第七形态来自 2026-09-22 本 skill 自身独立验收（P1/P2 两案）**：
 
 1. **命令/CLI 参数与字段名**（如 `file_size`、`wc -c`、`--write-baseline`）——A 文件禁用、B 文件教学
 2. **数值与阈值**（容量线、百分比、字符上限、超时数）——两处数值不等或口径（字节/字符）不同
@@ -218,6 +218,7 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 4. **计数点名与枚举**（「X 项/X 件套/X 连搜」+ 点名清单）——宣称数 ≠ 实列数、同名不同列
 5. **跨文件节点/步骤号引用**（「步骤 X」「闸门 N」「第 N 条」）——被引侧重排/改名后失配
 6. **外部权威声称**（「X 文件第 N 行」「源码 :1434」「config 定了 Z」）——行号漂移、行为改版（与第 7 步权威声称核实共用手法，7 步查单点真伪、本查查多处一致）
+7. **能力/行为声称**（「脚本能查 X」「接口行为 Y」「工具支持 Z」）——只核存在性会放过硬声称假行为：2026-09-22 本 skill 自身两案，「frontmatter 完整性检测」实为只查 --- 开头、「传目录静默不出结果」实抛 IsADirectoryError。判法：对每条能力声称造一个负例喂进去（缺字段的 frontmatter、故意传错的参数类型），行为与声称对得上才算真
 
 只在单文件出现一次的判据不进对账（无打架对象）。同名判据逐对**双向**比对方向与数值：A 处说允许、B 处说禁止 = 必有一错或缺边界裁决；同时核对数值/范围是否一致。**必含 SKILL.md 主流程 ↔ references 双向**——执行者先读正文再跳参考文件，两边打架最致命（参考文件的旧口径会被当成正文细则的例外执行）。
 
@@ -243,6 +244,6 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 
 ## 验证脚本
 
-`<你的 skill 安装目录>/scripts/audit_skill_health.py` —— 自动执行第 2 步（孤儿+断裂引用）、第 4 步（重复标题）、第 5 步（代码块配对）三项机械检查，另含 frontmatter 完整性检测（对应第 9 步验证首项），传入 skill 目录即出报告。手动体检后跑一遍兜底。第 7/8 步（权威声称、兜底前向引用）需纯人工判断，脚本不覆盖；第 8g 步有候选提取器 `scripts/criteria_overlap.py`（四类 token 自动配对待账清单，见 8g 节），候选仍须人工定性。
+`<你的 skill 安装目录>/scripts/audit_skill_health.py` —— 自动执行第 2 步（孤儿+断裂引用）、第 4 步（重复标题）、第 5 步（代码块配对）三项机械检查，另含 frontmatter **存在性**检查（仅查 --- 开头；name/version/description 字段齐全性不查——第 9 步验证首项仍须人工 read 前 12 行，勿因脚本绿而跳过），传入 skill 目录即出报告。手动体检后跑一遍兜底。第 7/8 步（权威声称、兜底前向引用）需纯人工判断，脚本不覆盖；第 8g 步有候选提取器 `scripts/criteria_overlap.py`（四类 token 自动配对待账清单，见 8g 节），候选仍须人工定性。
 
 > **官方 linter**（`tools/skill_linter.py` 的 `lint_skill()`，补 frontmatter 与工具名口径）用法 + **规则假阳性边界**（`dangling-reference` 假阳性 100%、`shell-utility-reference` ~80%，私人 skill 有大量合法例外）→ [references/official-linter.md](references/official-linter.md)

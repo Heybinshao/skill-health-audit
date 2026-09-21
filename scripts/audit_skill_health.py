@@ -9,9 +9,9 @@
     2. 断裂引用: SKILL.md 引了 references/xxx.md 但文件不存在
     3. 重复二级标题
     4. 代码块配对 (``` 应为偶数)
-    5. frontmatter 完整性
+    5. frontmatter 存在性（仅查是否以 --- 开头；字段齐全性不查，人工核）
 
-退出码: 0 = 健康, 1 = 有问题
+退出码: 0 = 健康, 1 = 发现问题, 2 = 用法错误（缺参数/找不到 SKILL.md）
 """
 import os
 import re
@@ -37,7 +37,7 @@ def main() -> int:
     skill_name = os.path.basename(skill_dir)
 
     # 1+2. 引用完整性交叉检查
-    cited = set(re.findall(r"references/([a-z0-9_-]+\.md)", content))
+    cited = set(re.findall(r"references/([A-Za-z0-9_-]+\.md)", content))
     refs_dir = os.path.join(skill_dir, "references")
     actual = set()
     if os.path.isdir(refs_dir):
