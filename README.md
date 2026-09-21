@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.4.2-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.5.3-blue)
 
 > 把你的 AI skill 丢给这套分步体检清单，查出「读不到、翻不到、走不通」的结构病。
 
@@ -23,6 +23,7 @@
 | 1 | 通读 SKILL.md + 全部 references + scripts | 中文 UTF-8 文件被误判 Binary 的坑（用 python 读）；体检/验收结论必须全目录通读后落笔 |
 | 2 | 引用完整性交叉检查 ⭐ | 孤儿 references（有文件没链接）/ 断裂引用（有链接没文件） |
 | 2b | 同名副本遮蔽检测 | 同 `name` 两份 skill，被加载器去重后其中一份永不生效 |
+| 2c | 散文指路语失效检测 | 外迁/重组后「见第 X 节」「见步骤 N」类自然语言指路断头——链接语法 grep 与脚本都扫不到，须单独扫 |
 | 3 | 错位文件检测 | 内容属于别的 skill 的错位文件 |
 | 4 | 重复/残留章节 | 迭代中粘贴残留：完整版 + 半成品并存 |
 | 5 | 代码块配对 | 未闭合 ` ``` ` 会把后续整节渲染成代码 |
@@ -72,7 +73,9 @@ python3 scripts/audit_skill_health.py <skill目录>
 skill-health-audit/
 ├── SKILL.md                                # 分步体检清单（主流程）
 ├── references/
-│   └── doc-script-split-pitfalls.md        # 8b/8d 延伸坑（脚本相对路径/config 死配置/plan 类声称检查手法）
+│   ├── common-pitfalls.md                  # 陷阱表（实测坑 + 体检后要不要跑路径模拟判断框架）
+│   ├── doc-script-split-pitfalls.md        # 8b/8d 延伸坑（脚本相对路径/config 死配置/plan 类声称检查手法）
+│   └── official-linter.md                  # 官方 linter 用法 + 规则假阳性边界
 └── scripts/
     ├── audit_skill_health.py               # 自动化体检（第 2/4/5 步 + frontmatter）
     └── criteria_overlap.py                 # 8g 判据对账候选提取器（四类 token 跨文件配对）

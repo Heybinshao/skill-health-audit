@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
-description: "【Skill 结构体检】开源/发布前给 skill 或开发方案做结构体检：孤儿 references、断裂引用三分类定性、同名副本遮蔽检测、错位文件、残留章节、未闭合代码块、权威声称核实、兜底前向引用、死 triggers 字段、触发词覆盖、旧口径对账、全量判据对账——分步清单 + 自动化脚本，126 个 skill 全量体检实战验证。触发场景：检查一下skill、体检skill、有没有开源必要、skill好不好用、整理skill、我的XX skill怎么样。只管单 skill 内部结构；整体验收（结构+场景+路径模拟出统一报告）走 skill-acceptance。"
-version: 1.4.2
+description: "【Skill 结构体检】体检skill、检查一下skill。孤儿/断链/开源前"
+version: 1.5.3
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -44,6 +44,7 @@ ls references/                                             # 目录下实际有�
 - **脚本的「N 个引用」≠附属文件总数，引用扫描口径仅覆盖 markdown 链接语法**：正文行内反引号式引用（`scripts/batch_vision.py` 这类）不计入，会同时少报引用数、漏检 scripts/ 目录孤儿。核对法：`find <skill_dir> -type f` 列全部附属文件，逐个 grep 正文提及次数，0 次才是真孤儿——引用数与文件数的差额本身就是待人工定性清单。
 - **正文引了、目录没有 → 断裂引用**：补文件或删引用。
 - **断裂报告先三分类定性再动手**（2026-09-06 全量验收 19 处断链实测：真断裂仅 3）：①示例代码块里的路径（教格式的举例）→ 不修；②举例性提及（教学句里写「坑表可写成独立 common-pitfalls.md 文件」这类，不带路径前缀也不算引用）→ 不修；③跨 skill 文件引用（正主在别的 skill 里且文件存在）→ 改为带「跨 skill 文件不属本目录」措辞消歧。只有「指向本目录 references/ 但文件不存在」才是真断裂。脚本正则无法区分，人工复核必做。
+- **核对口径补充**（原 skill-library-audit「单 Skill 内部健康审计」第 7 步，2026-09-20 归位）：②类跨 skill 引用要**去归属 skill 的 `references/` 核对**——按本目录报断链是**扫描器口径错误**；③类（教学/历史语境、示例占位名）不核对，非活指针。
 - 2026-08-08 实测：memory-file-maintenance 目录 9 个 references，正文只引 4 个，5 个孤儿（其中 4 个有货只是没挂链接、1 个是错位文件）。
 
 ### 2b. 同名副本遮蔽检测（CLI 按 name 去重的盲区，2026-09-06 实测）
@@ -63,6 +64,21 @@ grep -rh "^name:" ~/.hermes/skills --include=SKILL.md 2>/dev/null | sort | uniq 
 
 **注意**：curator 使用统计的 key 也按 name 记账——被遮蔽副本的使用数据会记到生效那份头上，判断「谁在用」时勿被误导。
 
+### 2c. 散文指路语失效检测（外迁/重组/合并后必做）
+
+**症状**：内容外迁到 references 后，正文里**用自然语言指路**的句子断头——「见第 X 节」「见批量处理第 N 条」「C 线工作流第 N 项」「见 Step 5 去重判据」「section above」。这类句子不是 markdown 路径引用，第 2 步的 `references/xxx.md` grep 与孤儿/断链脚本**都扫不到**（脚本口径只覆盖链接语法与裸路径）。
+
+```bash
+grep -nE "见第|见 *Step|第 *[0-9]+ *(条|项|步|点)|上文|上节|前文|先见|section above|见下方|见前" <skill_dir>/SKILL.md
+```
+
+逐条核对指路目标还在不在本文件：
+- 目标是**本文件内的节/步骤** → 查该节是否仍存在（外迁常常把它一起带走）
+- 目标**已外迁** → 改成带文件链接的显式引用（`[名称](references/<file>.md)`）或删句
+- **首次出现处**必须补显式链接，其后重复处可保留简短措辞
+
+**为什么必查**：外迁时正文保留「流程骨架」，最自然的写法就是「详见第 N 条」——而那条恰恰被搬走了，执行者顺指路语翻不到内容，等于断头。实测（10 个 skill 批量瘦身）：路径引用层全绿、脚本零报错，系统性扫指路语才抓出 4 处悬空，且是用户追问「确定都没什么问题么」才动手查的——**外迁后主动扫，别等追问**。
+
 ### 3. 错位文件检测（属于别的 skill 的文件）
 
 看到内容主题与本职不符的 reference（如记忆维护 skill 里出现 path-simulation 方法论）→ 去目标 skill 核实是否已有正主：
@@ -70,6 +86,7 @@ grep -rh "^name:" ~/.hermes/skills --include=SKILL.md 2>/dev/null | sort | uniq 
 - 正主已有（目标 skill 的 SKILL.md 或 references 已含该内容）→ 冗余副本，删
 - 正主没有 → 内容**迁回目标 skill** 再删副本（见第 6 步迁移检查）
 
+- 2026-08-08 实测案例：`path-simulation-methodology.md` 混进 memory-file-maintenance 的 references（内容属别的 skill），核实正主后删副本
 ### 4. 重复/残留章节检测
 
 ```bash
@@ -106,6 +123,7 @@ references 里出现「X 文件第 N 行规定 Y」「config 定了 Z」这类**
 - 声称的权威文件是否存在、那一行是否真是那个内容
 - 2026-08-08 实测：usability-self-test.md 声称「MEMORY.md 硬上限 10k（SOUL.md 第22行定的规矩）」——实测 SOUL.md 第22行是「删除文件前必须问」，根本没有 10k 规定；真权威是 `config.yaml` 的 `memory_char_limit: 10000`。SKILL.md 第293行同款错误说法也中招。
 - **为什么实战暴露不了**：主干流程只走「通读→决策→执行」，永远不会去核对 references 声称的权威——只有专门走跨文件路径才抓得到。
+- **反向同样成立：自己下判据前先核源，别凭印象定标尺**。设阈值/上限类判据（字符上限、体积线、超时数）或做「某类全都缺 X」的断言前，先 grep 源码/权威文件拿实值，再按权威口径分区统计。实测两连翻车：① 按印象把 description 上限当 120 字符（源码 `SKILL_PROMPT_DESC_LIMIT = 60`，宽了一倍，超长项漏修一半，超限的触发词继续被截断）；② 凭错误分区断言「41 个 skill 缺 version」（按归属分区后自建区 100% 有，真缺失量为零，差一步去改官方区）。**印象值和错分区都会让整批操作打偏，而它们在报告里看起来同样言之凿凿——先拿命令输出再开口。**
 
 ### 8. 兜底前向引用检查（异常解法与触发点距离）
 
@@ -131,7 +149,17 @@ grep -nE "用法|usage|\.html|\.json|HREF=|Bookmarks" <skill_dir>/SKILL.md
 
 ### 8c. 触发词覆盖检查（description 是唯一的系统级触发面）
 
-**机制（源码口径，勿再凭直觉改回）**：系统提示的 skill 索引只注入 frontmatter 的 `description`（`agent/prompt_builder.py` → `extract_skill_description`）；加载器读取的条件字段只有 toolset/platform 门控（`_CONDITION_KEYS`），**任何位置的 `triggers` 字段（顶层 `triggers:` 和 `metadata.hermes.triggers`）都不被读取，是死配置**。description 不含的触发词 = 该场景永远匹配不到。检查法：
+**机制（源码口径，勿再凭直觉改回）**：系统提示的 skill 索引只注入 frontmatter 的 `description`（`agent/prompt_builder.py` → `extract_skill_description`）；加载器读取的条件字段只有 toolset/platform 门控（`_CONDITION_KEYS`），**任何位置的 `triggers` 字段（顶层 `triggers:` 和 `metadata.hermes.triggers`）都不被读取，是死配置**。description 不含的触发词 = 该场景永远匹配不到。
+
+**⚠️ description 还有长度截断（8c 的关键限定，勿漏）**：`SKILL_PROMPT_DESC_LIMIT = 60`（`agent/skill_utils.py`），索引只渲染 `description[:57] + "..."`——**超 60 字符的部分每轮对话都读不到**，触发词写在后半段 = 等于没写。所以触发词必须落在**前 57 字符内**（写法规范：职责一句话 + 最高频 3-4 词，见 skill-creation-rules 第三步）。**压缩到 ≤60 时，用户真实会说的入口词必须留在前 57 字**——用「流程与清单」顶掉「上传」这类原话 = 覆盖失败；`description-length` linter 绿 ≠ 触发覆盖过。低频问句不必硬塞 60 字，主路径词丢了就是病。截完用用户原话走一遍触发覆盖，不能拿上轮「结构 0 问题」当基线。
+
+检查法：
+
+```bash
+python3 -c "import yaml,sys;s=open(sys.argv[1],encoding='utf-8').read();d=yaml.safe_load(s[3:s.find(chr(10)+'---',3)]);print(len(d['description']),d['description'])" <skill_dir>/SKILL.md
+# >60 = 后半段触发词不进系统提示，按上表重写
+```
+
 
 ```bash
 grep -n "triggers:" <skill_dir>/SKILL.md           # 发现死 triggers 字段（不要往里补词）
@@ -165,7 +193,7 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 
 1. **先统计各节行数占比**：主流程 vs 附则群（纪律/陷阱/异常表）。附则占比 >40% = 典型可外迁形态
 2. **附则外迁 recipe**（2026-08-28 实测 memory-file-maintenance：444 行/43KB → 365 行/14KB，-67%）：同主题附则合并成 1-2 个 references（如 writing-disciplines.md + pitfalls.md）；SKILL.md 原位置留「⚠️ 必读指向行」（写明触发场景：何时必须去读）；外迁后 8e 自身的坑——**指向行替换原文时会连带删掉附近对旧 references 的引用语句，产生新孤儿**，改完必须重跑第 2 步孤儿检测
-3. **主流程不因瘦身砍内容**：七步/决策树等主干骨架原地保留；瘦的是「规则细则」不是「流程步骤」
+3. **主流程不因瘦身砍内容**：七步/决策树等主干骨架原地保留；瘦的是「规则细则」不是「流程步骤」。**外迁后禁止把主文件改成「动手前先读 references 全文」**——那把按需加载变成每次强制二次加载，弱模型会把细则当闸门；指向行只写触发场景（何时读哪一段），不写先读完再动手
 4. **双表漂移检查**：SKILL.md 里维护的副本表（频率表/映射门表）要与权威源逐行核对——权威源加了行、副本没跟是高频漂移点（实测：README 频率表加 2 行，skill 副本漏 1 行）
 
 ### 8f. 第三方仓库：体检对象是 canonical SKILL.md
@@ -211,47 +239,10 @@ grep -rln "<本 skill name>" ~/.hermes/skills --include=SKILL.md
 
 ## 陷阱
 
-| 陷阱 | 为什么是问题 | 正确做法 |
-|------|------------|---------|
-| patch 报 no_change 就以为删了 | fuzzy match 可能误判"目标已存在"，实际残留段还在 | 改后必须 python/read_file **重读目标段确认**，不信 no_change（2026-08-08 实测第一次 patch 就误报，重读发现残留段原封不动，换精确 old_string 才删掉） |
-| 删错位文件前不查独有信息 | 文件里可能有别处没有的规则 | 删前在你的知识库/参考库全文搜索 + 查目标 skill，独有内容先归位再删 |
-| 只修 SKILL.md 不修 references | 孤儿文件继续躺着，读者翻不到 | 补链接或删除二选一，别留半吊子 |
-| 残留段带未闭合 \`\`\` 以为无害 | 后续整节渲染成代码块，阅读直接坏 | 代码块配对检查必做 |
-| read_file 读含 VS 的文件报 Binary 就放弃 | Unicode variation selectors 误判，文件本身正常 | python3 读，grep 不受影响可辅助验证 |
-| 信 references 里的「X 文件第 N 行规定 Y」 | 声称的权威可能不存在或行号不对（实测 SOUL.md 第22行是「删除文件前必须问」，却被声称是 10k 上限） | 逐条 grep 验证声称；真权威常是 config.yaml 而非 SOUL.md |
-| 兜底写在文件尾部、入口无前向提示 | agent 走到触发点不知道有解法，可能卡住 | 触发点加「若报 X，见异常表第 N 行」；检查入口与兜底距离 |
-| 文档说 JSON 工作流、脚本只吃 HTML（或反之） | doc/script 割裂，读者照文档走脚本报错 | 脚本改读文档格式，或文档改回脚本真能吃格式；不准留「注：当前版本基于 X 格式」兜底把缺陷写进文档（2026-08-09 实测 dia-bookmark-sync） |
-| read_file 报 Binary 就当真二进制放弃 | 纯中文 UTF-8 也会误判，文件本身正常 | 先 `file <path>` 看是否 UTF-8 text，是则用 python3 读出，grep 不受影响可辅助 |
-| 只跑 8d 变更关键词对账，以为跨文件语义打架查过了 | 8d 关键词表 = 本轮改造的旧词（grep 仍是全目录），历史轮次留下的旧口径不在本轮关键词集里，deep 文件永不命中（2026-09-16 实测：mfm 四轮验收全绿 vs 同日全量深读抓 3 处判据打架） | 全量档跑 8g：跨文件重复判据逐对双向核方向，不依赖本轮变更关键词 |
-| 架构改造后只验主干路径，不查旧口径残留 | 旧表述/旧标注/旧说明文字残留在漏改位置（双模式改造实测 3 类：触发句还写「走完整审计」、3 处 CHECKPOINT 只标 2 处、query 加了 sort 但说明还写旧语义），路径模拟走主干抓不到 | 改造后先做 8d 旧口径对账：列旧关键词全目录 grep + 同款元素逐个核对标注，再跑路径模拟 |
-| 评估"会不会好用"只看结构 | 结构健康 ≠ 体验好 | 对用户本人极好用 ≠ 对外人好用：还要查私有依赖（MCP/用户名/硬编码路径）、私有上下文（"本会话实测"时间戳）、单一用户假设 |
-| 外迁附则时顺手删掉了附近旧引用语句 | 替换节为指向行的操作会波及周围文本，产生新孤儿（2026-08-28 实测：memory-file-maintenance 瘦身后 5 个 references 断链） | 外迁后必重跑第 2 步孤儿检测；新指向行的措辞要覆盖原引用的信息量（指向行丢失「见异常表第 N 行」这类细节=兜底前向引用退化） |
-| 指向行声称「见 X 文件的 Y 条目」但 X 里没有 Y | 外迁/重组时指向行凭记忆写，目标文件实际条目名对不上（2026-08-28 实测：④写「日期过时→date」，pitfalls.md 无此条，真身在 common-pitfalls.md） | 写指向行前先 grep 目标文件确认条目存在；跨文件指向优先指向条目真身而非就近文件 |
-| 同名 skill 两份，删文件后总再回来 | hub 管理的 skill 按 lock.json 登记路径复种；删副本前先 grep `~/.hermes/skills/.hub/lock.json` | lock.json 登记的走 `hermes skills uninstall`，未登记的直接删文件 |
-| 把仓库体量或 star 当 skill 复杂度 | 分发适配器会让仓库看起来很重，canonical 文件可能只有一百行 | 体检只打 canonical SKILL.md（见 8f）；star 是分发信号，不是结构分数 |
-| 散文落点路径核不到（8d 同族） | 正文句子里的「产物存到 `<某路径>`」「归档到 X 目录」不是引用语法，第 2 步的孤儿/断链检测天然扫不到 | 把路径拿到真实磁盘 `ls` 核对存在性；同动作在姊妹 skill 有另一种写法时先对比口径，两边矛盾必有一假（2026-09 本地版实测沉淀） |
-| 引用检查把跨 skill 指向报成断裂 | 正文提及别家 skill 的 references 路径会被本目录引用检查误判为断裂 | 先读命中句语义再定性；跨 skill 指向措辞写明「跨 skill 文件不属本目录」消歧，或避免裸路径写法 |
-| 姊妹 skill 动词/硬数字越界 | description 开头动词用了姊妹 skill 的职能词（体检清单写「发布前验收」），模型分不清触发词归属谁；消费方抄步骤总数硬数字（「十步清单」），源加一步消费方就成了现行犯且路径模拟抓不到 | description 用本词表述职能、句尾带一句责任边界（「只管 X；整体验收走 Y」）；消费方只引用步骤号不写总数硬数字。**清单步骤增删即全家福对账**：grep 全库引用本 skill 的 SKILL.md，同步消费方措辞与其降级快照表行，一次改齐再收工 |
-| 报「缺 X 项」类断言凭印象/局部读下结论 | 验收报告声称目标缺某行/某节，实际存在（只扫了部分表就断言全缺）——假缺陷进报告后用户照单全收去修，修空气比漏修更伤信任 | 每条「缺失」断言落报告前先对该目标 grep 一次拿命中/零命中作证据（存在性断言的举证责任和断裂检测对称：说「有」要引原文，说「缺」要贴零命中命令输出） |
-
-## 体检后：要不要跑路径模拟？（2026-08-08 定稿）
-
-**结论：只要被测 skill 是「用户会走一串步骤」的流程类 skill，就值得跑一次 path-simulation——高频实战不是豁免理由。**
-
-曾误判：「memory-file-maintenance 是你最高频实战的 skill，每次你说整理记忆就是真实走一遍，实战即模拟，不需要专门路径模拟。」用户坚持跑了一遍，**立刻抓到 2 条实战暴露不了的问题**（虚假权威引用、兜底无前向引用）——都是「跨文件路径 #7」才看得到的：
-
-- 实战走主干：通读→决策→执行，永远不会去核对 references 声称的权威是否真实存在
-- 路径模拟走跨文件路径：专门 grep 所有「X 文件第 N 行规定 Y」声称 → 发现 SOUL.md 引用是假的
-
-**正确的判断框架**：
-- 高频实战 skill：主干路径早已被真实执行验证过，**但跨文件一致性从未被验证** → 至少跑一次跨文件路径 #7（专核 references 之间、references 与外部权威之间的矛盾）
-- 低频/未发布 skill：跑标准 + 风险路径全套
-- 纯知识类（无步骤）：不跑，静态检查够
-
-与 `path-simulation` skill 的衔接：体检第 7 步（权威声称核实）就是跨文件路径 #7 的具体化，8g（全量判据对账）是 #7 对账方法的权威版（#7 执行定义已回指，两文件均独立可用）；跑路径模拟时直接复用本 skill 的清单。
+> 实测坑表（patch 报 no_change / 删错位文件 / 未闭合代码块 / 假权威声称 / doc-script 割裂 / 8d 关键词盲区 / 外迁后旧引用残留等，勿在本句写死条数——8g 形态 4「宣称数≠实列数」自踩案 2026-09-22 实证）+ **体检后要不要跑路径模拟的判断框架** → [references/common-pitfalls.md](references/common-pitfalls.md)
 
 ## 验证脚本
 
 `<你的 skill 安装目录>/scripts/audit_skill_health.py` —— 自动执行第 2 步（孤儿+断裂引用）、第 4 步（重复标题）、第 5 步（代码块配对）三项机械检查，另含 frontmatter 完整性检测（对应第 9 步验证首项），传入 skill 目录即出报告。手动体检后跑一遍兜底。第 7/8 步（权威声称、兜底前向引用）需纯人工判断，脚本不覆盖；第 8g 步有候选提取器 `scripts/criteria_overlap.py`（四类 token 自动配对待账清单，见 8g 节），候选仍须人工定性。
 
-**合并/搬迁类改动的验收必跑本脚本**——执行者在合并时最容易引入新断裂引用（搬走引用目标、改写指向行时漏改路径），这不是可选的收尾，是合并流程的一部分。**检查类请求也一样必跑**——「评估/体检 XX skill」先跑脚本再人工分析，脚本秒级抓出孤儿/断链（2026-09-12 验收 hermes-desktop-plugin-dev 时先跑了脚本，3 个重排孤儿在静态分析前就被抓出）。
+> **官方 linter**（`tools/skill_linter.py` 的 `lint_skill()`，补 frontmatter 与工具名口径）用法 + **规则假阳性边界**（`dangling-reference` 假阳性 100%、`shell-utility-reference` ~80%，私人 skill 有大量合法例外）→ [references/official-linter.md](references/official-linter.md)
