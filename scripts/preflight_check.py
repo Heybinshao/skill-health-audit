@@ -17,11 +17,52 @@
 退出码: 0 = 无机械问题; 1 = 有机械问题（孤儿/断裂/同名副本）; 2 = 用法错误
 """
 import argparse
+import datetime
 import glob
 import json
 import os
 import re
 import sys
+import time
+
+
+def recent_writes(hours=6, limit=8, ledger=None):
+    """近期 skill 目录被谁改过（curator / 其他会话）——**按时间窗口过滤**。
+
+    为什么不用 session_id 过滤（2026-09-22 实测坑）：桌面端会话轮转会换 id
+    （同一对话 050527_290c57 → 052612_275e22，两个 id 相差 30 毫秒），按旧 id
+    过滤会直接漏掉轮转后的写入，于是又把人往「兄弟会话抢改」的错误归因上带。
+    账本路径固定在 skills 根下；文件缺失/被轮转就返回空表（不报错）。
+    """
+    ledger = ledger or os.path.join(os.path.expanduser("~/.hermes/skills"),
+                                    ".curator_ledger.jsonl")
+    out, cutoff = [], time.time() - hours * 3600
+    if not os.path.isfile(ledger):
+        return out
+    with open(ledger, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            try:
+                t = datetime.datetime.strptime(d.get("ts", "")[:19],
+                                               "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                continue
+            unix = t.replace(tzinfo=datetime.timezone.utc).timestamp()
+            if unix < cutoff:
+                continue
+            ev = d.get("evidence") or {}
+            out.append({
+                "ts": datetime.datetime.fromtimestamp(unix).strftime("%m-%d %H:%M:%S"),
+                "actor": d.get("actor"), "action": d.get("action"),
+                "skill": d.get("skill"),
+                "session_tail": (ev.get("session_id") or "")[-9:],
+                "file": ev.get("file_path") or "",
+            })
+    return out[-limit:]
+
 
 PLACEHOLDER = {"xxx.md", "yyy.md", "zzz.md", "example.md", "foo.md", "bar.md",
                "test.md", "sample.md", "文件.md"}
@@ -59,7 +100,7 @@ def fm(text):
     return out
 
 
-def check(skill_dir, skills_root, max_hits):
+def check(skill_dir, skills_root, max_hits, window_hours=6):
     text = read(os.path.join(skill_dir, "SKILL.md"))
     if not text:
         return None
@@ -119,6 +160,7 @@ def check(skill_dir, skills_root, max_hits):
         "triggers_field": bool(meta.get("triggers")),
         "cited": sorted(cited), "orphans": orphans, "missing": missing,
         "cross_skill": cross,
+        "recent_writes": recent_writes(window_hours), "window_hours": window_hours,
         "duplicate_name": dupes,
         "toc_strong": strong[:max_hits], "toc_strong_total": len(strong),
         "toc_weak": weak[:max_hits], "toc_weak_total": len(weak),
@@ -156,6 +198,12 @@ def render(d):
       f"只在「编号对被指文件无实体」时算问题")
     for h in d["toc_weak"][:5]:
         a(f"        {h['file']}:{h['line']}  {h['text']}")
+    rw = d.get("recent_writes") or []
+    a(f"[并发写入] 近 {d.get('window_hours', 6)} 小时 skills 目录被写 {len(rw)} 次"
+      + ("（curator / 其他会话——开工前先看一眼，别覆盖别人刚落的改动）" if rw else " ✅"))
+    for w in rw:
+        a(f"        {w['ts']} {w['actor']}/{w['action']} {w['skill']}"
+          f"{' ' + w['file'] if w['file'] else ''}  session…{w['session_tail']}")
     a("[下一步] 8g 判据对账：先跑 criteria_overlap 出形态 1/2/4/5 候选 → **只读命中涉及的文件**；")
     a("         形态 3/6/7 用 lure 正则定向抓（不做全对象逐字通读）:")
     for k, v in d["next"]["lures"].items():
@@ -217,6 +265,8 @@ def main():
     ap.add_argument("--skills-root",
                     default=os.path.expanduser("~/.hermes/skills"))
     ap.add_argument("--max-hits", type=int, default=25)
+    ap.add_argument("--window-hours", type=float, default=6,
+                    help="并发写入窗口（小时）；按时间窗口而非 session_id 过滤——会话轮转会换 id")
     args = ap.parse_args()
     if args.scan_all:
         rows = scan_all(args.skills_root)
@@ -229,7 +279,8 @@ def main():
     if not os.path.isdir(args.skill_dir):
         print(f"用法错误: 目录不存在 {args.skill_dir}", file=sys.stderr)
         return 2
-    d = check(os.path.abspath(args.skill_dir), args.skills_root, args.max_hits)
+    d = check(os.path.abspath(args.skill_dir), args.skills_root, args.max_hits,
+              args.window_hours)
     if d is None:
         print(f"用法错误: {args.skill_dir} 下无 SKILL.md", file=sys.stderr)
         return 2

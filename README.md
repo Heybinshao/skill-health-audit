@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.6.3-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.6.4-blue)
 
 > 把你的 AI skill 丢给这套分步体检清单，查出「读不到、翻不到、走不通」的结构病。
 
@@ -33,7 +33,7 @@
 | 8b | 文档/脚本一致性 | 文档说 JSON 工作流、脚本只吃 HTML |
 | 8c | 触发词覆盖 | description 是唯一系统级触发面 vs 正文触发词漂移（死 `triggers:` 字段并入 description 后删除） |
 | 8d | 架构改造后旧口径对账 | 改造后旧表述残留在漏改位置（grep 本轮变更关键词） |
-| 8e | 体量分层 | 主文件超 ~15KB 且结构健康 → 附则外迁 references |
+| 8e | 体量分层 | 主文件超 ~15KB 且结构健康 → 附则外迁 references（**附则群口径 = 纪律/陷阱/异常表**；触发条件与入口、参考文件索引、核心判据骨架都不计入——先钉口径再算占比，防分母之争） |
 | 8f | 第三方仓库对象判定 | 体检对象是 canonical SKILL.md，分发适配器不算膨胀 |
 | 8g | 全量判据对账 ⭐ | 跨文件重复出现的可执行判据（命令/数值/范围声明）逐对双向核方向——不依赖本轮变更关键词，专抓历史轮次残留的「A 文件禁 X、B 文件教 X」语义打架。**提速**：形态 1/2/4/5 走候选脚本、形态 3/6/7 用 lure 正则定向抓，收工锚是「每条判据对有结论」而不是「每个文件都逐字读过」 |
 | 9 | 修复后验证 | 重 grep/重读/frontmatter 核验，不验证不汇报 |
@@ -52,9 +52,12 @@
 python3 scripts/audit_skill_health.py <skill目录>   # 结构体检：孤儿/断裂/重复标题/代码块/frontmatter
 python3 scripts/preflight_check.py <skill目录>      # 开场预检：一次拿齐机械证据
 python3 scripts/preflight_check.py --scan-all       # 全库门面扫描：description 超限 + 死 triggers
+python3 scripts/selftest.py                         # 两个脚本的自测（19 条断言，0 成本回归）
 ```
 
-`preflight_check.py` 把**开场那十几条散装命令合成一次调用**（0.05 秒出全表）：元信息（description 长度与超限、死 `triggers:` 字段、字符数、references 估读量）、引用完整性（含跨 skill 识别）、第 2b 步同名副本遮蔽、第 2c 步散文指路语（**强信号=真指路语逐条读 / 弱信号=仅编号枚举抽样**）、以及 8g 的下一步线索（候选提取命令 + 形态 3/6/7 的 lure 正则）；`--scan-all` 扫全库（实测在 139 个 skill 的库里查出 13 个 description 超限——超限的第 60 字符之后内容不进系统提示，等于白写）。退出码 0 = 无机械问题 / 1 = 有 / 2 = 用法错误。
+`preflight_check.py` 把**开场那十几条散装命令合成一次调用**（0.05 秒出全表）：元信息（description 长度与超限、死 `triggers:` 字段、字符数、references 估读量）、引用完整性（含跨 skill 识别）、第 2b 步同名副本遮蔽、第 2c 步散文指路语（**强信号=真指路语逐条读 / 弱信号=仅编号枚举抽样**）、**并发写入提示**（`[并发写入]` 段：近 N 小时 skills 目录被哪些进程写过——按**时间窗口**过滤，`--window-hours` 可调，防止覆盖其他会话/自动整理进程刚落下的改动）、以及 8g 的下一步线索（候选提取命令 + 形态 3/6/7 的 lure 正则）；`--scan-all` 扫全库（实测在 139 个 skill 的库里查出 13 个 description 超限——超限的第 60 字符之后内容不进系统提示，等于白写）。退出码 0 = 无机械问题 / 1 = 有 / 2 = 用法错误。
+
+`selftest.py` 自建临时夹具（跑完即删，不依赖你本机任何既有 skill）验证两个脚本的行为与回归点：良构 skill 双绿且不被误报、病构 skill 双红并点名孤儿/断裂/重复标题/代码块未配对/description 越界、含点文件名不被截断、跨 skill 引用判为非问题、`--scan-all` 抓到超限项。**改完脚本先跑它**（编写时就靠它抓出两条假绿：断言词出现在夹具内容里、被引用的文件不算孤儿）。
 
 `audit_skill_health.py` 退出码 0 = 健康，1 = 有问题（输出具体问题清单）。frontmatter 只做**存在性检查**（仅查是否以 `---` 开头，字段齐全性仍须人工核；别把「脚本绿」当成 frontmatter 没问题）。第 7/8/8b/8c/8d/8e/8f 步需人工判断；8g 有候选提取器 `scripts/criteria_overlap.py`（提取行内代码 token/数值阈值/计数点名/步骤引用四类，输出出现在 2+ 文件的候选对，★标主文↔ref 优先）——**只出线索不定性，误报正常，逐对结论仍由人给**。
 
@@ -82,7 +85,8 @@ skill-health-audit/
 │   └── official-linter.md                  # 官方 linter 用法 + 规则假阳性边界
 └── scripts/
     ├── audit_skill_health.py               # 自动化体检（第 2/4/5 步 + frontmatter 存在性）
-    ├── preflight_check.py                  # 开场预检（元信息/引用/2b/2c/8g 线索；--scan-all 全库门面扫描）
+    ├── preflight_check.py                  # 开场预检（元信息/引用/2b/2c/并发写入/8g 线索；--scan-all 全库门面扫描）
+    ├── selftest.py                         # 两个脚本的自测（19 条断言，临时夹具即建即删）
     └── criteria_overlap.py                 # 8g 判据对账候选提取器（四类 token 跨文件配对）
 ```
 
