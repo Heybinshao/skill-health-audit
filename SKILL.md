@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
 description: "【Skill 结构体检】体检skill、检查一下skill、会不会好用。只管单skill结构；验收走验收skill"
-version: 1.7.0
+version: 1.7.1
 author: 彬少
 license: MIT
 platforms: [linux, macos, windows]
