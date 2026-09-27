@@ -1,7 +1,7 @@
 ---
 name: skill-health-audit
 description: "【Skill 结构体检】体检skill、检查一下skill、会不会好用、有没有开源必要。只管单skill结构"
-version: 1.7.2
+version: 1.7.3
 author: 彬少
 license: MIT
 platforms: [linux, macos, windows]
@@ -51,7 +51,7 @@ ls references/                                             # 目录下实际有�
 
 ### 2b. 同名副本遮蔽检测（CLI 按 name 去重的盲区，2026-09-06 实测）
 
-**机制**：Hermes 按 frontmatter `name` 去重加载 skill——同一个 name 存在两份时（如官方位 `note-taking/obsidian` + 自建位 `<分类>/<主题>/<skill>`），CLI 列表只显示一份，**另一份永远不被加载**：它的 description 不进系统提示、内容从不生效，纯占磁盘。这解释了「为什么自建的增强版从未起作用」。
+**机制**：Hermes 按 frontmatter `name` 去重加载 skill——同一个 name 存在两份时（如官方位 `note-taking/obsidian` + 自建位 `<分类>/<主题>/obsidian`），CLI 列表只显示一份，**另一份永远不被加载**：它的 description 不进系统提示、内容从不生效，纯占磁盘。这解释了「为什么自建的增强版从未起作用」。
 
 检测法（审计时对可疑 skill 跑一遍）：
 

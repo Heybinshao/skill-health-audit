@@ -1,4 +1,4 @@
-# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.7.2-blue)
+# 🩺 Skill 结构体检（skill-health-audit） ![版本](https://img.shields.io/badge/版本-v1.7.3-blue)
 
 > 把你的 AI skill 丢给这套分步体检清单，查出「读不到、翻不到、走不通」的结构病。
 
@@ -62,6 +62,17 @@ python3 scripts/selftest.py                         # 两个脚本的自测（19
 `selftest.py` 自建临时夹具（跑完即删，不依赖你本机任何既有 skill）验证两个脚本的行为与回归点：良构 skill 双绿且不被误报、病构 skill 双红并点名孤儿/断裂/重复标题/代码块未配对/description 越界、含点文件名不被截断、跨 skill 引用判为非问题、`--scan-all` 抓到超限项。**改完脚本先跑它**（编写时就靠它抓出两条假绿：断言词出现在夹具内容里、被引用的文件不算孤儿）。
 
 `audit_skill_health.py` 退出码 0 = 健康，1 = 有问题（输出具体问题清单）。frontmatter 只做**存在性检查**（仅查是否以 `---` 开头，字段齐全性仍须人工核；别把「脚本绿」当成 frontmatter 没问题）。第 7/8/8b/8c/8d/8e/8f 步需人工判断；8g 有候选提取器 `scripts/criteria_overlap.py`（提取行内代码 token/数值阈值/计数点名/步骤引用四类，输出出现在 2+ 文件的候选对，★标主文↔ref 优先）——**只出线索不定性，误报正常，逐对结论仍由人给**。
+
+## 与姊妹 skill 的关系
+
+四个 skill 是一套（[skill-acceptance](https://github.com/Heybinshao/skill-acceptance) 是编排器，唯一入口）：
+
+| 关系 | 细节 |
+|---|---|
+| **独立可用** | 本 skill 不消费任何其他 skill，体检 + 4 个自动化脚本自成一套 |
+| **被 `skill-acceptance` 消费** | 编排器的 Phase 1（结构体检）按**引用步骤号**指向本仓清单——本仓加一步（7b/8h/9b…），编排器自动跟随，无需改 |
+| **与 `path-simulation` 概念交叉** | 本 skill 的第 7 步（权威声称核实）就是「跨文件路径 #7」的具体化，8g（全量判据对账）是 #7 的对账方法——两者互为「怎么查」与「查什么」 |
+| **产出物的版式不由本 skill 定** | 验收报告长什么样由 [skill-acceptance-report-schema](https://github.com/Heybinshao/skill-acceptance-report-schema) 定（双层四区 + 台账字段 + 严重度语义） |
 
 ## 适合 / 不适合
 
