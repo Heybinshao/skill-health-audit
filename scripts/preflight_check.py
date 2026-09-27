@@ -15,6 +15,11 @@
 
 用法: python3 preflight_check.py <skill_dir> [--json] [--skills-root PATH] [--max-hits N]
 退出码: 0 = 无机械问题; 1 = 有机械问题（孤儿/断裂/同名副本）; 2 = 用法错误
+
+**退出码只接阻断级**（2026-09-27 裁决）：孤儿 / 断裂 / 同名副本遮蔽 = 引用坏掉，继续走会得出错误结论 → exit 1。
+description 超限与死 `triggers` 字段 = **注意级不阻断**（⚠️ 符号）：超限只让前 57 字之后的路由信号白写，不影响本脚本其余检查的结论正确性，
+且超限对象往往同时有别的问题，用 exit 表达它会掩盖真阻断项。**符号跟后果走**——判据：问「不满足时是否真的不能往下走」，
+答「只是信号弱一点」就不该占 🔴 或 exit 1（与 report-schema「严重度 = 后果类别」同款纪律）。要查全库这两项用 `--scan-all`。
 """
 import argparse
 import datetime
@@ -179,7 +184,7 @@ def render(d):
     desc = d["description"]
     a(f"[元信息] SKILL.md {d['chars']} 字符 | references {d['references']['count']} 个 "
       f"/ {d['references']['chars']} 字符 | 估读量 {d['references']['est_total_chars']} 字符")
-    a(f"        description {desc['chars']} 字符（限 60）{'🔴 超限' if desc['over_limit'] else '✅'}"
+    a(f"        description {desc['chars']} 字符（限 60）{'⚠️ 超限（注意级，不阻断）' if desc['over_limit'] else '✅'}"
       f" | 前57: {desc['first57']}")
     a(f"        死 triggers 字段: {'⚠️ 存在（加载器不读，应并入 description 后删）' if d['triggers_field'] else '无 ✅'}")
     a(f"[引用]  已引用 {len(d['cited'])} / 实存 {d['references']['count']}"
