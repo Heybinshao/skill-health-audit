@@ -3,7 +3,7 @@ name: skill-health-audit
 description: "【Skill 结构体检】体检skill、检查一下skill、会不会好用、有没有开源必要。只管单skill结构"
 version: 1.7.3
 author: 彬少
-license: MIT
+license: CC BY-NC 4.0
 platforms: [linux, macos, windows]
 metadata:
   hermes:
